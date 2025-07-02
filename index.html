@@ -1,90 +1,132 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>ESP32 Proximity Logs</title>
+  <meta charset="UTF-8" />
+  <title>🚗 Proximity Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      margin: 0;
+      background: linear-gradient(135deg, #141e30, #243b55);
+      font-family: 'Orbitron', sans-serif;
       color: #fff;
       text-align: center;
       padding: 2rem;
     }
+
     h1 {
-      margin-bottom: 1rem;
       font-size: 2.5em;
-    }
-    table {
-      width: 90%;
-      max-width: 800px;
-      margin: auto;
-      border-collapse: collapse;
-      background: #0f3460;
-      box-shadow: 0 0 15px #00fff7;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    th, td {
-      padding: 15px;
-      border-bottom: 1px solid #222;
-    }
-    th {
-      background-color: #1f4068;
-      font-weight: bold;
+      margin-bottom: 0.5em;
       color: #00fff7;
     }
-    tr:hover {
-      background-color: #1a1a2e;
+
+    .card-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
     }
-    .updated {
-      margin-top: 1rem;
-      font-size: 0.9em;
+
+    .card {
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 15px;
+      box-shadow: 0 0 20px #00fff7;
+      padding: 20px;
+      width: 250px;
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover {
+      transform: scale(1.05);
+    }
+
+    .timestamp {
+      font-size: 0.8em;
+      color: #ccc;
+    }
+
+    .distance {
+      font-size: 2em;
+      font-weight: bold;
+      color: #ffcc70;
+      margin: 0.5em 0;
+    }
+
+    .status {
+      font-size: 1.5em;
+      font-weight: bold;
+      padding: 0.4em 0.8em;
+      border-radius: 10px;
+      display: inline-block;
+    }
+
+    .too-close {
+      background: #ff4e50;
+      color: white;
+      animation: pulse 1.5s infinite;
+    }
+
+    .just-right {
+      background: #2ebf91;
+      color: white;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .footer {
+      margin-top: 2rem;
+      font-size: 0.8em;
       color: #ccc;
     }
   </style>
 </head>
 <body>
-  <h1>📊 ESP32 Proximity Data</h1>
-  <table>
-    <thead>
-      <tr>
-        <th>Timestamp</th>
-        <th>Distance (cm)</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="data-table"></tbody>
-  </table>
-  <div class="updated" id="updated-time"></div>
+  <h1>📡 ESP32 Proximity Monitor</h1>
+  <div class="card-container" id="data-container"></div>
+  <div class="footer" id="last-updated">Last updated: --</div>
 
   <script>
-    const apiURL = 'https://script.google.com/macros/s/AKfycbyHlw3mo6Rd166_jeRSjb8eAFslSfS6D_ZRDTKZs9R_s8A2AZNKO2m16c73BV6C9v02UA/exec';
+    const apiURL = "https://script.google.com/macros/s/AKfycbzH-ZzTnEQRUpLkrUtIs5DpBvcgtnWKTy6MMcXk57M6upUqfKwesNMWSwvosgVGr8gj/exec"; // Replace this
 
-    async function loadData() {
+    async function fetchData() {
       try {
-        const res = await fetch(apiURL);
-        const data = await res.json();
-        const tableBody = document.getElementById("data-table");
-        tableBody.innerHTML = "";
+        const response = await fetch(apiURL);
+        const data = await response.json();
 
-        data.reverse().forEach(row => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${row.Timestamp}</td><td>${row['Distance (cm)']}</td><td>${row.Status}</td>`;
-          tableBody.appendChild(tr);
+        const container = document.getElementById('data-container');
+        container.innerHTML = '';
+
+        data.slice(-5).reverse().forEach(entry => {
+          const card = document.createElement('div');
+          card.className = 'card';
+
+          const statusClass = entry.status.includes("Too Close") ? "too-close" : "just-right";
+
+          card.innerHTML = `
+            <div class="timestamp">🕒 ${new Date(entry.timestamp).toLocaleString()}</div>
+            <div class="distance">📏 ${entry.distance} cm</div>
+            <div class="status ${statusClass}">${entry.status}</div>
+          `;
+
+          container.appendChild(card);
         });
 
-        const now = new Date();
-        document.getElementById("updated-time").textContent = "Last updated: " + now.toLocaleString();
-      } catch (err) {
-        console.error("❌ Error fetching data:", err);
-        document.getElementById("updated-time").textContent = "Failed to update. Check API.";
+        document.getElementById("last-updated").textContent =
+          "Last updated: " + new Date().toLocaleTimeString();
+
+      } catch (error) {
+        console.error("❌ Error fetching data:", error);
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      loadData();
-      setInterval(loadData, 30000); // Refresh every 30s
-    });
+    // Initial load
+    fetchData();
+    // Refresh every 30 seconds
+    setInterval(fetchData, 30000);
   </script>
 </body>
 </html>
